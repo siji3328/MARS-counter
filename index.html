@@ -32,8 +32,8 @@
 </head>
 <body>
     <h1>Colony Counter</h1>
-    <label for="imageUpload">Upload Image:</label>
-    <input type="file" id="imageUpload" accept="image/*">
+    <label for="imageUpload">Upload Image (JPEG/PNG):</label>
+    <input type="file" id="imageUpload" accept="image/jpeg, image/png">
     <button id="countColoniesButton" onclick="countColonies()" disabled>Count Colonies</button>
     <div id="result"></div>
     <canvas id="uploadedImage" style="display: none;" width="640" height="480"></canvas>
@@ -78,17 +78,21 @@
                 }
 
                 try {
+                    console.log("Attempting to read image from canvas using cv.imread...");
                     const src = cv.imread(canvas);
                     if (!src || src.empty()) {
                         throw new Error("Failed to load image from canvas.");
                     }
+                    console.log("Image successfully loaded into src.");
 
                     const dst = new cv.Mat();
 
                     // 이미지를 HSV로 변환하여 형광 및 비형광 부분 검출
                     try {
+                        console.log("Attempting to convert image to HSV...");
                         cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
                         cv.cvtColor(src, src, cv.COLOR_RGB2HSV, 0);
+                        console.log("Image successfully converted to HSV.");
                     } catch (error) {
                         console.error("Error converting image to HSV:", error);
                         alert("An error occurred while converting the image to HSV format.");
@@ -103,9 +107,11 @@
                     cv.inRange(src, lowerFluorescent, upperFluorescent, fluorescentMask);
 
                     // 컨투어 검출
+                    console.log("Attempting to find contours...");
                     const contours = new cv.MatVector();
                     const hierarchy = new cv.Mat();
                     cv.findContours(fluorescentMask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                    console.log("Contours successfully found.");
 
                     // 형광 콜로니 수 계산 및 표시
                     let fluorescentCount = 0;
