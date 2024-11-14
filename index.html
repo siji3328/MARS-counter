@@ -85,6 +85,7 @@
                     } catch (error) {
                         console.error("Error converting image to HSV:", error);
                         alert("An error occurred while converting the image to HSV format.");
+                        src.delete();
                         return;
                     }
 
@@ -124,6 +125,10 @@
                     console.error("Error processing image:", error);
                     alert("An error occurred while processing the image. Please check the console for details.");
                 }
+            };
+
+            img.onerror = function () {
+                alert("Failed to load the image. Please try a different image file.");
             };
         }
     </script>
