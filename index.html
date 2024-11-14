@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oligo Sequence Tools</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+
+        label, input, textarea {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px;
+        }
+
+        .result {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            background: #f9f9f9;
+            padding: 15px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Oligo Sequence Tools</h1>
+
+    <!-- 입력 폼 -->
+    <label for="sequence">IUPAC Sequence:</label>
+    <textarea id="sequence">ATGAGYAARGGNGARGARCTNTTYACNGGNGTNGTNCCNATHCTNGTNGARCTNGAYGGNGAYGTNAAYGGNCAYAARTTYAGYGTNCGNGGNGARGGNGARGGNGAYGCNACNATHGGNAARCTNACNCTNAARTTYATHTGYACNACNGGNAARCTNCCNGTNCCNTGGCCNACNCTNGTNACNACNCTNACNTAYGGNGTNCARTGYTTYAGYCGNTAYCCNGAYCAYATGAARCGNCAYGAYTTYTTYAARTCNGCNATGCCNGARGGNTAYGTNCARGARCGNACNATHAGYTTYAARGAYGAYGGNAARTAYAARACNCGNGCNGTNGTNAARTTYGARGGNGAYACNCTNGTNAAYCGNATHGARCTNAARGGNACNGAYTTYAARGARGAYGGNAAYATHCTNGGNCAYAARCTNGARTAYAAYTTYAAYAGYCAYAAYGTNTAYATHACNGCNGAYAARCARAARAAYGGNATHAARGCNAAYTTYACNGTNCGNCAYAAYGTNGARGAYGGNAGYGTNCARCTNGCNGAYCAYTAYCARCARAAYACNCCNATHGGNGAYGGNCCNGTNCTNCTNCCNGAYAAYCAYTAYCTNAGYACNCARACNGTNCTNTCNAARGAYCCNAAYGARAARCGNGAYCAYATGGTNCTNCAYGARTAYGTNAAYGCNGCNGGNATHACNTAR</textarea>
+
+    <label for="oligoLengths">Oligo Lengths (comma-separated):</label>
+    <input type="text" id="oligoLengths" value="89, 89, 89, 89, 89, 89, 89, 89, 89, 82">
+
+    <label for="overlapLengths">Overlap Lengths (comma-separated):</label>
+    <input type="text" id="overlapLengths" value="20, 20, 20, 20, 20, 28, 22, 21, 22">
+
+    <label for="replacementSequence">Replacement DNA Sequence (optional):</label>
+    <textarea id="replacementSequence">ATGAGCAAAGGTGAAGAACTGTTTACCGGCGTTGTGCCGATTCTGGTGGAACTGGATGGCGATGTGAACGGTCACAAATTCAGCGTGCGTGGTGAAGGTGAAGGCGATGCCACGATTGGCAAACTGACGCTGAAATTTATCTGCACCACCGGCAAACTGCCGGTGCCGTGGCCGACGCTGGTGACCACCCTGACCTATGGCGTTCAGTGTTTTAGTCGCTATCCGGATCACATGAAACGTCACGATTTCTTTAAATCTGCAATGCCGGAAGGCTATGTGCAGGAACGTACGATTAGCTTTAAAGATGATGGCAAATATAAAACGCGCGCCGTTGTGAAATTTGAAGGCGATACCCTGGTGAACCGCATTGAACTGAAAGGCACGGATTTTAAAGAAGATGGCAATATCCTGGGCCATAAACTGGAATACAACTTTAATAGCCATAATGTTTATATTACGGCGGATAAACAGAAAAATGGCATCAAAGCGAATTTTACCGTTCGCCATAACGTTGAAGATGGCAGTGTGCAGCTGGCAGATCATTATCAGCAGAATACCCCGATTGGTGATGGTCCGGTGCTGCTGCCGGATAATCATTATCTGAGCACGCAGACCGTTCTGTCTAAAGATCCGAACGAAAAACGGGACCACATGGTTCTGCACGAATATGTGAATGCGGCAGGTATTACGTAA</textarea>
+
+    <button onclick="generateOligos()">Generate Oligos</button>
+    <button onclick="generateReverseComplement()">Generate Reverse Complement</button>
+    <button onclick="desembleOligos()">Desembler</button>
+    
+    <div class="result" id="result"></div>
+
+    <script>
+        // IUPAC 상보적 코드 테이블 정의
+        const complementaryTable = {
+            "A": "T", "T": "A", "G": "C", "C": "G",
+            "R": "Y", "Y": "R", "S": "S", "W": "W",
+            "K": "M", "M": "K", "B": "V", "D": "H",
+            "H": "D", "V": "B", "N": "N"
+        };
+
+        // 상보적 서열을 생성하는 함수 (reverse complementary)
+        function getReverseComplementarySequence(sequence) {
+            let complementarySequence = "";
+            for (let base of sequence) {
+                complementarySequence += complementaryTable[base] || base;
+            }
+            return complementarySequence.split("").reverse().join("");
+        }
+
+        // 올리고 서열 생성 함수
+        function createOligos(sequence, oligoLengths, overlapLengths) {
+            let oligos = [];
+            let start = 0;
+            for (let i = 0; i < oligoLengths.length; i++) {
+                let end = start + oligoLengths[i];
+                oligos.push(sequence.slice(start, end));
+                if (i < overlapLengths.length) { // 마지막 조각에는 오버랩이 없으므로 조건 추가
+                    start += (oligoLengths[i] - overlapLengths[i]);
+                }
+            }
+            return oligos;
+        }
+        
+        // Generate Oligos 버튼의 기능 구현
+        function generateOligos() {
+            const sequence = document.getElementById("sequence").value;
+            const oligoLengths = document.getElementById("oligoLengths").value.split(",").map(Number);
+            const overlapLengths = document.getElementById("overlapLengths").value.split(",").map(Number);
+
+            const oligos = createOligos(sequence, oligoLengths, overlapLengths);
+
+            let result = "";
+            oligos.forEach((oligo, index) => {
+                result += `Oligo ${index + 1} (길이: ${oligo.length}): ${oligo}\n\n`;
+            });
+
+            document.getElementById("result").innerText = result;
+        }
+
+        // Generate Reverse Complementary 버튼의 기능 구현
+        function generateReverseComplement() {
+            const sequence = document.getElementById("sequence").value;
+            const oligoLengths = document.getElementById("oligoLengths").value.split(",").map(Number);
+            const overlapLengths = document.getElementById("overlapLengths").value.split(",").map(Number);
+
+            const oligos = createOligos(sequence, oligoLengths, overlapLengths);
+            const reverseComplementOligos = oligos.map(getReverseComplementarySequence);
+
+            let result = "";
+            reverseComplementOligos.forEach((oligo, index) => {
+                result += `Oligo ${index + 1} (Reverse Complementary): ${oligo}\n\n`;
+            });
+
+            document.getElementById("result").innerText = result;
+        }
+
+        // Tm 계산 함수 (Wallace Rule 사용, overlap 부분만)
+        function calculateTm(overlapSequence) {
+            let tm = 0;
+            for (let base of overlapSequence) {
+                if (base === 'A' || base === 'T') {
+                    tm += 2;
+                } else if (base === 'G' || base === 'C') {
+                    tm += 4;
+                }
+            }
+            return tm;
+        }
+
+        // Desembler: 홀수 번째는 Forward, 짝수 번째는 Reverse Complementary로 출력 + Tm 계산
+        function desembleOligos() {
+            const sequence = document.getElementById("sequence").value;
+            const oligoLengths = document.getElementById("oligoLengths").value.split(",").map(Number);
+            const overlapLengths = document.getElementById("overlapLengths").value.split(",").map(Number);
+            let replacementSequence = document.getElementById("replacementSequence").value;
+
+            const oligos = createOligos(sequence, oligoLengths, overlapLengths);
+
+            let result = "";
+            oligos.forEach((oligo, index) => {
+                let overlapSequence = oligo.slice(oligo.length - overlapLengths[index]);
+                
+                // Replacement sequence 사용 여부 확인
+                let replacementOverlap = overlapSequence;
+                if (replacementSequence) {
+                    replacementOverlap = replacementSequence.slice(0, overlapLengths[index]);
+                }
+                
+                let tm = calculateTm(replacementOverlap);
+
+                if (index % 2 === 0) { // 홀수 인덱스 (1-based, 실제로는 0-based이므로 짝수)
+                    let modifiedOligo = replacementOverlap + oligo.slice(overlapLengths[index]);
+                    result += `Oligo ${index + 1} (Forward, Tm of overlap: ${tm}°C): ${modifiedOligo}\n\n`;
+                } else { // 짝수 인덱스 (0-based 홀수)
+                    const reverseOligo = getReverseComplementarySequence(oligo);
+                    let modifiedReverseOligo = reverseOligo.slice(0, reverseOligo.length - overlapLengths[index]) + replacementOverlap;
+                    tm = calculateTm(replacementOverlap);
+                    result += `Oligo ${index + 1} (Reverse Complementary, Tm of overlap: ${tm}°C): ${modifiedReverseOligo}\n\n`;
+                }
+
+                // 대체된 서열을 포함한 replacementSequence를 업데이트 (앞 부분을 잘라내고 남은 부분)
+                if (replacementSequence) {
+                    replacementSequence = replacementSequence.slice(overlapLengths[index]);
+                }
+            });
+
+            document.getElementById("result").innerText = result;
+        }
+    </script>
+</body>
+
+</html>
