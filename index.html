@@ -34,7 +34,7 @@
     <h1>Colony Counter</h1>
     <label for="imageUpload">Upload Image:</label>
     <input type="file" id="imageUpload" accept="image/*">
-    <button onclick="countColonies()">Count Colonies</button>
+    <button id="countColoniesButton" onclick="countColonies()">Count Colonies</button>
     <div id="result"></div>
     <canvas id="uploadedImage" style="display: none;"></canvas>
     <canvas id="processedImage"></canvas>
@@ -43,7 +43,16 @@
     <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
 
     <script>
+        function waitForOpenCv(callback) {
+            if (cv && cv.imread) {
+                callback();
+            } else {
+                setTimeout(() => waitForOpenCv(callback), 100);
+            }
+        }
+
         function countColonies() {
+            console.log("countColonies function started.");
             const fileInput = document.getElementById("imageUpload");
             if (fileInput.files.length === 0) {
                 alert("Please upload an image first.");
@@ -53,6 +62,7 @@
             const img = new Image();
             img.src = URL.createObjectURL(fileInput.files[0]);
             img.onload = function () {
+                console.log("Image loaded for processing.");
                 const canvas = document.getElementById("uploadedImage");
                 const processedCanvas = document.getElementById("processedImage");
                 canvas.width = img.width;
@@ -92,6 +102,7 @@
                 // 결과 표시
                 cv.imshow("processedImage", dst);
                 document.getElementById("result").innerText = `Fluorescent Colonies Count: ${fluorescentCount}`;
+                console.log(`Fluorescent Colonies Count: ${fluorescentCount}`);
 
                 // 메모리 해제
                 src.delete();
@@ -103,6 +114,12 @@
                 hierarchy.delete();
             };
         }
+
+        // OpenCV.js가 로드된 후 콜로니 카운트 함수 사용 가능
+        waitForOpenCv(() => {
+            console.log("OpenCV.js is ready.");
+            document.getElementById("countColoniesButton").disabled = false;
+        });
     </script>
 </body>
 </html>
