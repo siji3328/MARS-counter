@@ -34,20 +34,26 @@
     <h1>Colony Counter</h1>
     <label for="imageUpload">Upload Image:</label>
     <input type="file" id="imageUpload" accept="image/*">
-    <button id="countColoniesButton" onclick="countColonies()" disabled>Count Colonies</button>
+    <button id="countColoniesButton" onclick="countColonies()">Count Colonies</button>
     <div id="result"></div>
     <canvas id="uploadedImage" style="display: none;"></canvas>
     <canvas id="processedImage"></canvas>
 
     <!-- OpenCV.js 로드 -->
-    <script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();"></script>
-    
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+
     <script>
-        // OpenCV.js가 준비되면 호출되는 함수
-        function onOpenCvReady() {
-            console.log("OpenCV.js is ready.");
-            document.getElementById("countColoniesButton").disabled = false;
+        // OpenCV.js가 로드되었는지 주기적으로 확인하는 함수
+        function checkOpenCvReady() {
+            if (cv && cv.Mat) {
+                console.log("OpenCV.js is ready.");
+                document.getElementById("countColoniesButton").disabled = false;
+            } else {
+                // OpenCV.js가 아직 준비되지 않았으면 다시 시도
+                setTimeout(checkOpenCvReady, 100);
+            }
         }
+        checkOpenCvReady();
 
         // 콜로니 카운트 함수
         function countColonies() {
@@ -82,4 +88,36 @@
                 // 형광 및 비형광 콜로니 영역 생성
                 const lowerFluorescent = new cv.Mat(src.rows, src.cols, src.type(), [30, 100, 100, 0]);
                 const upperFluorescent = new cv.Mat(src.rows, src.cols, src.type(), [90, 255, 255, 255]);
-                const fluorescentMask = new cv.
+                const fluorescentMask = new cv.Mat();
+                cv.inRange(src, lowerFluorescent, upperFluorescent, fluorescentMask);
+
+                // 컨투어 검출
+                const contours = new cv.MatVector();
+                const hierarchy = new cv.Mat();
+                cv.findContours(fluorescentMask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+                // 형광 콜로니 수 계산 및 표시
+                let fluorescentCount = 0;
+                for (let i = 0; i < contours.size(); i++) {
+                    const color = new cv.Scalar(255, 0, 0);
+                    cv.drawContours(dst, contours, i, color, 2, cv.LINE_8, hierarchy, 0);
+                    fluorescentCount++;
+                }
+
+                // 결과 표시
+                cv.imshow("processedImage", dst);
+                document.getElementById("result").innerText = `Fluorescent Colonies Count: ${fluorescentCount}`;
+
+                // 메모리 해제
+                src.delete();
+                dst.delete();
+                fluorescentMask.delete();
+                lowerFluorescent.delete();
+                upperFluorescent.delete();
+                contours.delete();
+                hierarchy.delete();
+            };
+        }
+    </script>
+</body>
+</html>
