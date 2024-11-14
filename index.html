@@ -1,182 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oligo Sequence Tools</title>
+    <title>Colony Counter</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
             padding: 20px;
         }
-
-        label, input, textarea {
+        label, input, button {
             display: block;
             margin-bottom: 10px;
         }
-
-        textarea {
-            width: 100%;
-            height: 100px;
-        }
-
         button {
-            margin-top: 20px;
             padding: 10px;
         }
-
-        .result {
+        #result {
             margin-top: 20px;
-            white-space: pre-wrap;
             background: #f9f9f9;
             padding: 15px;
             border: 1px solid #ddd;
         }
+        #uploadedImage, #processedImage {
+            display: block;
+            margin-top: 20px;
+            max-width: 100%;
+        }
     </style>
 </head>
-
 <body>
-    <h1>Oligo Sequence Tools</h1>
-
-    <!-- 입력 폼 -->
-    <label for="sequence">IUPAC Sequence:</label>
-    <textarea id="sequence">ATGAGYAARGGNGARGARCTNTTYACNGGNGTNGTNCCNATHCTNGTNGARCTNGAYGGNGAYGTNAAYGGNCAYAARTTYAGYGTNCGNGGNGARGGNGARGGNGAYGCNACNATHGGNAARCTNACNCTNAARTTYATHTGYACNACNGGNAARCTNCCNGTNCCNTGGCCNACNCTNGTNACNACNCTNACNTAYGGNGTNCARTGYTTYAGYCGNTAYCCNGAYCAYATGAARCGNCAYGAYTTYTTYAARTCNGCNATGCCNGARGGNTAYGTNCARGARCGNACNATHAGYTTYAARGAYGAYGGNAARTAYAARACNCGNGCNGTNGTNAARTTYGARGGNGAYACNCTNGTNAAYCGNATHGARCTNAARGGNACNGAYTTYAARGARGAYGGNAAYATHCTNGGNCAYAARCTNGARTAYAAYTTYAAYAGYCAYAAYGTNTAYATHACNGCNGAYAARCARAARAAYGGNATHAARGCNAAYTTYACNGTNCGNCAYAAYGTNGARGAYGGNAGYGTNCARCTNGCNGAYCAYTAYCARCARAAYACNCCNATHGGNGAYGGNCCNGTNCTNCTNCCNGAYAAYCAYTAYCTNAGYACNCARACNGTNCTNTCNAARGAYCCNAAYGARAARCGNGAYCAYATGGTNCTNCAYGARTAYGTNAAYGCNGCNGGNATHACNTAR</textarea>
-
-    <label for="oligoLengths">Oligo Lengths (comma-separated):</label>
-    <input type="text" id="oligoLengths" value="89, 89, 89, 89, 89, 89, 89, 89, 89, 82">
-
-    <label for="overlapLengths">Overlap Lengths (comma-separated):</label>
-    <input type="text" id="overlapLengths" value="20, 20, 20, 20, 20, 28, 22, 21, 22">
-
-    <label for="replacementSequence">Replacement DNA Sequence (optional):</label>
-    <textarea id="replacementSequence">ATGAGCAAAGGTGAAGAACTGTTTACCGGCGTTGTGCCGATTCTGGTGGAACTGGATGGCGATGTGAACGGTCACAAATTCAGCGTGCGTGGTGAAGGTGAAGGCGATGCCACGATTGGCAAACTGACGCTGAAATTTATCTGCACCACCGGCAAACTGCCGGTGCCGTGGCCGACGCTGGTGACCACCCTGACCTATGGCGTTCAGTGTTTTAGTCGCTATCCGGATCACATGAAACGTCACGATTTCTTTAAATCTGCAATGCCGGAAGGCTATGTGCAGGAACGTACGATTAGCTTTAAAGATGATGGCAAATATAAAACGCGCGCCGTTGTGAAATTTGAAGGCGATACCCTGGTGAACCGCATTGAACTGAAAGGCACGGATTTTAAAGAAGATGGCAATATCCTGGGCCATAAACTGGAATACAACTTTAATAGCCATAATGTTTATATTACGGCGGATAAACAGAAAAATGGCATCAAAGCGAATTTTACCGTTCGCCATAACGTTGAAGATGGCAGTGTGCAGCTGGCAGATCATTATCAGCAGAATACCCCGATTGGTGATGGTCCGGTGCTGCTGCCGGATAATCATTATCTGAGCACGCAGACCGTTCTGTCTAAAGATCCGAACGAAAAACGGGACCACATGGTTCTGCACGAATATGTGAATGCGGCAGGTATTACGTAA</textarea>
-
-    <button onclick="generateOligos()">Generate Oligos</button>
-    <button onclick="generateReverseComplement()">Generate Reverse Complement</button>
-    <button onclick="desembleOligos()">Desembler</button>
-    
-    <div class="result" id="result"></div>
-
+    <h1>Colony Counter</h1>
+    <label for="imageUpload">Upload Image:</label>
+    <input type="file" id="imageUpload" accept="image/*">
+    <button onclick="countColonies()">Count Colonies</button>
+    <div id="result"></div>
+    <canvas id="uploadedImage" style="display: none;"></canvas>
+    <canvas id="processedImage"></canvas>
+    <script src="https://docs.opencv.org/4.x/opencv.js"></script>
     <script>
-        // IUPAC 상보적 코드 테이블 정의
-        const complementaryTable = {
-            "A": "T", "T": "A", "G": "C", "C": "G",
-            "R": "Y", "Y": "R", "S": "S", "W": "W",
-            "K": "M", "M": "K", "B": "V", "D": "H",
-            "H": "D", "V": "B", "N": "N"
-        };
-
-        // 상보적 서열을 생성하는 함수 (reverse complementary)
-        function getReverseComplementarySequence(sequence) {
-            let complementarySequence = "";
-            for (let base of sequence) {
-                complementarySequence += complementaryTable[base] || base;
+        function countColonies() {
+            const fileInput = document.getElementById("imageUpload");
+            if (fileInput.files.length === 0) {
+                alert("Please upload an image first.");
+                return;
             }
-            return complementarySequence.split("").reverse().join("");
-        }
 
-        // 올리고 서열 생성 함수
-        function createOligos(sequence, oligoLengths, overlapLengths) {
-            let oligos = [];
-            let start = 0;
-            for (let i = 0; i < oligoLengths.length; i++) {
-                let end = start + oligoLengths[i];
-                oligos.push(sequence.slice(start, end));
-                if (i < overlapLengths.length) { // 마지막 조각에는 오버랩이 없으므로 조건 추가
-                    start += (oligoLengths[i] - overlapLengths[i]);
-                }
-            }
-            return oligos;
-        }
-        
-        // Generate Oligos 버튼의 기능 구현
-        function generateOligos() {
-            const sequence = document.getElementById("sequence").value;
-            const oligoLengths = document.getElementById("oligoLengths").value.split(",").map(Number);
-            const overlapLengths = document.getElementById("overlapLengths").value.split(",").map(Number);
+            const img = new Image();
+            img.src = URL.createObjectURL(fileInput.files[0]);
+            img.onload = function () {
+                const canvas = document.getElementById("uploadedImage");
+                const processedCanvas = document.getElementById("processedImage");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                processedCanvas.width = img.width;
+                processedCanvas.height = img.height;
 
-            const oligos = createOligos(sequence, oligoLengths, overlapLengths);
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
 
-            let result = "";
-            oligos.forEach((oligo, index) => {
-                result += `Oligo ${index + 1} (길이: ${oligo.length}): ${oligo}\n\n`;
-            });
+                const src = cv.imread(canvas);
+                const dst = new cv.Mat();
 
-            document.getElementById("result").innerText = result;
-        }
+                // 이미지를 HSV로 변환하여 형광 및 비형광 부분 검출
+                cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
+                cv.cvtColor(src, src, cv.COLOR_RGB2HSV, 0);
 
-        // Generate Reverse Complementary 버튼의 기능 구현
-        function generateReverseComplement() {
-            const sequence = document.getElementById("sequence").value;
-            const oligoLengths = document.getElementById("oligoLengths").value.split(",").map(Number);
-            const overlapLengths = document.getElementById("overlapLengths").value.split(",").map(Number);
+                // 형광 및 비형광 콜로니 영역 생성
+                const lowerFluorescent = new cv.Mat(src.rows, src.cols, src.type(), [30, 100, 100, 0]);
+                const upperFluorescent = new cv.Mat(src.rows, src.cols, src.type(), [90, 255, 255, 255]);
+                const fluorescentMask = new cv.Mat();
+                cv.inRange(src, lowerFluorescent, upperFluorescent, fluorescentMask);
 
-            const oligos = createOligos(sequence, oligoLengths, overlapLengths);
-            const reverseComplementOligos = oligos.map(getReverseComplementarySequence);
+                // 컨투어 검출
+                const contours = new cv.MatVector();
+                const hierarchy = new cv.Mat();
+                cv.findContours(fluorescentMask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-            let result = "";
-            reverseComplementOligos.forEach((oligo, index) => {
-                result += `Oligo ${index + 1} (Reverse Complementary): ${oligo}\n\n`;
-            });
-
-            document.getElementById("result").innerText = result;
-        }
-
-        // Tm 계산 함수 (Wallace Rule 사용, overlap 부분만)
-        function calculateTm(overlapSequence) {
-            let tm = 0;
-            for (let base of overlapSequence) {
-                if (base === 'A' || base === 'T') {
-                    tm += 2;
-                } else if (base === 'G' || base === 'C') {
-                    tm += 4;
-                }
-            }
-            return tm;
-        }
-
-        // Desembler: 홀수 번째는 Forward, 짝수 번째는 Reverse Complementary로 출력 + Tm 계산
-        function desembleOligos() {
-            const sequence = document.getElementById("sequence").value;
-            const oligoLengths = document.getElementById("oligoLengths").value.split(",").map(Number);
-            const overlapLengths = document.getElementById("overlapLengths").value.split(",").map(Number);
-            let replacementSequence = document.getElementById("replacementSequence").value;
-
-            const oligos = createOligos(sequence, oligoLengths, overlapLengths);
-
-            let result = "";
-            oligos.forEach((oligo, index) => {
-                let overlapSequence = oligo.slice(oligo.length - overlapLengths[index]);
-                
-                // Replacement sequence 사용 여부 확인
-                let replacementOverlap = overlapSequence;
-                if (replacementSequence) {
-                    replacementOverlap = replacementSequence.slice(0, overlapLengths[index]);
-                }
-                
-                let tm = calculateTm(replacementOverlap);
-
-                if (index % 2 === 0) { // 홀수 인덱스 (1-based, 실제로는 0-based이므로 짝수)
-                    let modifiedOligo = replacementOverlap + oligo.slice(overlapLengths[index]);
-                    result += `Oligo ${index + 1} (Forward, Tm of overlap: ${tm}°C): ${modifiedOligo}\n\n`;
-                } else { // 짝수 인덱스 (0-based 홀수)
-                    const reverseOligo = getReverseComplementarySequence(oligo);
-                    let modifiedReverseOligo = reverseOligo.slice(0, reverseOligo.length - overlapLengths[index]) + replacementOverlap;
-                    tm = calculateTm(replacementOverlap);
-                    result += `Oligo ${index + 1} (Reverse Complementary, Tm of overlap: ${tm}°C): ${modifiedReverseOligo}\n\n`;
+                // 형광 콜로니 수 계산 및 표시
+                let fluorescentCount = 0;
+                for (let i = 0; i < contours.size(); i++) {
+                    const color = new cv.Scalar(255, 0, 0);
+                    cv.drawContours(dst, contours, i, color, 2, cv.LINE_8, hierarchy, 0);
+                    fluorescentCount++;
                 }
 
-                // 대체된 서열을 포함한 replacementSequence를 업데이트 (앞 부분을 잘라내고 남은 부분)
-                if (replacementSequence) {
-                    replacementSequence = replacementSequence.slice(overlapLengths[index]);
-                }
-            });
+                // 결과 표시
+                cv.imshow("processedImage", dst);
+                document.getElementById("result").innerText = `Fluorescent Colonies Count: ${fluorescentCount}`;
 
-            document.getElementById("result").innerText = result;
+                // 메모리 해제
+                src.delete();
+                dst.delete();
+                fluorescentMask.delete();
+                lowerFluorescent.delete();
+                upperFluorescent.delete();
+                contours.delete();
+                hierarchy.delete();
+            };
         }
     </script>
 </body>
-
 </html>
