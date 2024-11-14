@@ -70,6 +70,13 @@
                 const ctx = canvas.getContext("2d", { willReadFrequently: true });
                 ctx.drawImage(img, 0, 0);
 
+                // Canvas에 이미지를 올바르게 그렸는지 확인
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                if (imageData.data.length === 0) {
+                    alert("Failed to load image data from canvas.");
+                    return;
+                }
+
                 try {
                     const src = cv.imread(canvas);
                     if (!src || src.empty()) {
