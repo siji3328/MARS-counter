@@ -72,11 +72,21 @@
 
                 try {
                     const src = cv.imread(canvas);
+                    if (!src || src.empty()) {
+                        throw new Error("Failed to load image from canvas.");
+                    }
+
                     const dst = new cv.Mat();
 
                     // 이미지를 HSV로 변환하여 형광 및 비형광 부분 검출
-                    cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-                    cv.cvtColor(src, src, cv.COLOR_RGB2HSV, 0);
+                    try {
+                        cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
+                        cv.cvtColor(src, src, cv.COLOR_RGB2HSV, 0);
+                    } catch (error) {
+                        console.error("Error converting image to HSV:", error);
+                        alert("An error occurred while converting the image to HSV format.");
+                        return;
+                    }
 
                     // 형광 및 비형광 콜로니 영역 생성
                     const lowerFluorescent = new cv.Mat(src.rows, src.cols, src.type(), [30, 100, 100, 0]);
